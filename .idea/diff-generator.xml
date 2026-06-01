@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DiffGenerationConfig">
+    <option name="snapshotDb" value="false" />
+    <option name="snapshotModelValue" value="finance-app:finance-app" />
+    <option name="sourceModelValue" value="finance-app:entityManagerFactory" />
+    <option name="targetDbValue" value="6ca1918d-57fd-4fc8-ac1f-c1c83a5773fd" />
+  </component>
+</project>
