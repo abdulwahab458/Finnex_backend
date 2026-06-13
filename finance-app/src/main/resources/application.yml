@@ -8,3 +8,10 @@ spring:
       ddl-auto: validate
 
     show-sql: true
+
+app:
+  jwt:
+    secret: soWTCqUj+CNC76IP5MILdHQeizaGzIv8LHc1zzdIF+o=
+    access-token-expiration: 900000
+    refresh-token-expiration: 604800000
+    issuer: smart-finance-api
