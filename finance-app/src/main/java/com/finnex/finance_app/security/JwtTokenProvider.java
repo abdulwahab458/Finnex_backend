@@ -43,6 +43,19 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public UUID getUserIdFromRefreshToken(String token) {
+
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return UUID.fromString(
+                claims.getSubject()
+        );
+    }
+
     public String generateRefreshToken(User user) {
 
         Date now = new Date();
@@ -95,7 +108,7 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getPayload();
 
-        return claims.get("email", String.class);
+        return claims.getSubject();
     }
 
 
