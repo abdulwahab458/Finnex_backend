@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="DatabaseMigrationSettings" lastSelectedDirectory="$PROJECT_DIR$/finance-app/src/main/resources/db/migration" />
+  <component name="DatabaseMigrationSettings" lastSelectedDirectory="$PROJECT_DIR$/finance-app/src/main/java/com/finnex/finance_app/domain/account/entity" />
 </project>
