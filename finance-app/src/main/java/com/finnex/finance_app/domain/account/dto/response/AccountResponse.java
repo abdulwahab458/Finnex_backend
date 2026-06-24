@@ -16,6 +16,6 @@ public class AccountResponse {
     private BigDecimal balance;
     private BigDecimal availableBalance;
     private String currency;
-    private boolean active;
+    private Boolean active;
     private LocalDate openedDate;
 }
