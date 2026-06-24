@@ -4,6 +4,7 @@ import com.finnex.finance_app.common.enums.AccountType;
 import com.finnex.finance_app.common.response.ApiResponse;
 import com.finnex.finance_app.domain.account.Service.AccountService;
 import com.finnex.finance_app.domain.account.dto.request.CreateAccountRequest;
+import com.finnex.finance_app.domain.account.dto.request.UpdateAccountRequest;
 import com.finnex.finance_app.domain.account.dto.response.AccountResponse;
 import com.finnex.finance_app.domain.account.entity.Account;
 import com.finnex.finance_app.domain.user.entity.User;
@@ -51,5 +52,23 @@ public class AccountController {
             @PathVariable UUID id
     ){
         return ApiResponse.ok(accountService.getAccountById(user,id),"Account Fetched Successfully");
+    }
+
+    @PutMapping("/{id}")
+    public ApiResponse<AccountResponse> updateAccount(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id,
+            @RequestBody UpdateAccountRequest request
+    ){
+        return ApiResponse.ok(accountService.updateAccount(user,id,request),"Account Updated Successfully");
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteAccount(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id
+    ){
+        accountService.deActivateAccount(user,id);
+        return ApiResponse.ok(null,"Account Deleted Successfully");
     }
 }

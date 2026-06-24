@@ -35,7 +35,7 @@ public class Account extends Auditable {
     @Column(length = 3)
     private String currency;
     @Column(nullable = false)
-    private Boolean isActive;
+    private Boolean active;
     private LocalDate openedDate;
     private LocalDate closedDate;
 

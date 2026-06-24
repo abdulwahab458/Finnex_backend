@@ -12,7 +12,7 @@ CREATE TABLE accounts
     balance           DECIMAL(19, 4),
     available_balance DECIMAL(19, 4),
     currency          VARCHAR(3),
-    is_active         BOOLEAN      NOT NULL,
+    active            BOOLEAN      NOT NULL,
     opened_date       date,
     closed_date       date,
     CONSTRAINT pk_accounts PRIMARY KEY (id)
