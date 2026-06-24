@@ -33,7 +33,7 @@ public class Account extends Auditable {
     @Column(precision = 19,scale = 4)
     private BigDecimal availableBalance;
     @Column(length = 3)
-    private String Currency;
+    private String currency;
     @Column(nullable = false)
     private Boolean isActive;
     private LocalDate openedDate;

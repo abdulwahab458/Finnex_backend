@@ -19,7 +19,7 @@ public class CreateAccountRequest {
     @NotBlank
     private String currency;
     @NotNull
-    @DecimalMin("0,00")
+    @DecimalMin("0.00")
     private BigDecimal initialBalance;
     
 }
