@@ -1,4 +1,4 @@
-package com.finnex.finance_app.domain.account.Controller;
+package com.finnex.finance_app.domain.account.controller;
 
 import com.finnex.finance_app.common.enums.AccountType;
 import com.finnex.finance_app.common.response.ApiResponse;
@@ -6,7 +6,6 @@ import com.finnex.finance_app.domain.account.Service.AccountService;
 import com.finnex.finance_app.domain.account.dto.request.CreateAccountRequest;
 import com.finnex.finance_app.domain.account.dto.request.UpdateAccountRequest;
 import com.finnex.finance_app.domain.account.dto.response.AccountResponse;
-import com.finnex.finance_app.domain.account.entity.Account;
 import com.finnex.finance_app.domain.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

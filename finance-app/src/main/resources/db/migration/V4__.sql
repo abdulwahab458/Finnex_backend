@@ -9,7 +9,7 @@ CREATE TABLE transactions
     transaction_date TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     amount           DECIMAL(19, 4) NOT NULL,
     type             VARCHAR(255)   NOT NULL,
-    catetory         VARCHAR(255)   NOT NULL,
+    category         VARCHAR(255)   NOT NULL,
     status           VARCHAR(255)   NOT NULL,
     notes            VARCHAR(1000),
     merchant_name    VARCHAR(255),

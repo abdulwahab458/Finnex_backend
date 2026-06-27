@@ -6,6 +6,7 @@ import com.finnex.finance_app.common.enums.TransactionStatus;
 import com.finnex.finance_app.common.enums.TransactionType;
 import com.finnex.finance_app.domain.account.entity.Account;
 import jakarta.persistence.*;
+import lombok.Data;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "transactions")
+@Data
 public class Transaction extends Auditable {
     @Id
     @GeneratedValue
@@ -31,7 +33,7 @@ public class Transaction extends Auditable {
     private TransactionType type;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TransactionCategory catetory;
+    private TransactionCategory category;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TransactionStatus status;
