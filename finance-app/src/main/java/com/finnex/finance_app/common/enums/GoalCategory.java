@@ -1,6 +1,6 @@
 package com.finnex.finance_app.common.enums;
 
-public enum GoalCategory {
+public enum  GoalCategory {
     EMERGENCY_FUND,
     RETIREMENT,
     VACATION,

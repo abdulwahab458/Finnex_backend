@@ -1,11 +1,10 @@
-package com.finnex.finance_app.domain.user.UserController;
+package com.finnex.finance_app.domain.user.controller;
 
 import com.finnex.finance_app.common.response.ApiResponse;
 import com.finnex.finance_app.domain.user.dto.request.UpdateProfile;
 import com.finnex.finance_app.domain.user.dto.response.UserResponse;
 import com.finnex.finance_app.domain.user.entity.User;
 import com.finnex.finance_app.domain.user.mapper.UserMapper;
-import com.finnex.finance_app.domain.user.repository.UserRepository;
 import com.finnex.finance_app.domain.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
