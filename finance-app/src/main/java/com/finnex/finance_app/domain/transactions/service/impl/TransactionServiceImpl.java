@@ -5,6 +5,7 @@ import com.finnex.finance_app.common.response.PagedResponse;
 import com.finnex.finance_app.domain.account.Repository.AccountRepository;
 import com.finnex.finance_app.domain.account.entity.Account;
 import com.finnex.finance_app.domain.transactions.dto.request.CreateTransactionRequest;
+import com.finnex.finance_app.domain.transactions.dto.request.UpdateTransactionRequest;
 import com.finnex.finance_app.domain.transactions.dto.response.TransactionResponse;
 import com.finnex.finance_app.domain.transactions.entity.Transaction;
 import com.finnex.finance_app.domain.transactions.mapper.TransactionMapper;
@@ -16,6 +17,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -78,5 +81,90 @@ public class TransactionServiceImpl implements TransactionService {
                 transactions.map(transactionMapper::toResponse);
 
         return PagedResponse.of(response);
+    }
+
+    @Override
+    public TransactionResponse getTransactionById(User currentuser, UUID transactionId) {
+        Transaction transaction = transactionRepository
+                .findByIdAndAccountUserId(transactionId,currentuser.getId())
+                .orElseThrow(() -> new ResourceNotFound("Transaction not found"));
+
+        return transactionMapper.toResponse(transaction);
+    }
+
+    @Override
+    public TransactionResponse updateTransaction(User curretUser, UUID transactionId, UpdateTransactionRequest request) {
+        Transaction transaction = transactionRepository
+                .findByIdAndAccountUserId(transactionId,curretUser.getId())
+                .orElseThrow(() -> new ResourceNotFound("Transaction not found"));
+
+        Account account = transaction.getAccount();
+        switch (transaction.getType()) {
+            case CREDIT ->
+                account.setBalance(account.getBalance().subtract(transaction.getAmount()));
+            case DEBIT ->
+                account.setBalance(account.getBalance().add(transaction.getAmount()));
+            case  TRANSFER ->{
+                //will do it later
+            }
+        }
+        //transaction Update
+        transaction.setAmount(request.getAmount());
+        transaction.setType(request.getType());
+        transaction.setCategory(request.getCategory());
+        transaction.setStatus(request.getStatus());
+        transaction.setTransactionDate(request.getTransactionDate());
+        transaction.setMerchantName(request.getMerchantName());
+        transaction.setNotes(request.getNotes());
+
+        // Apply new transaction
+        switch (request.getType()) {
+
+            case CREDIT ->
+                    account.setBalance(
+                            account.getBalance()
+                                    .add(request.getAmount())
+                    );
+
+            case DEBIT ->
+                    account.setBalance(
+                            account.getBalance()
+                                    .subtract(request.getAmount())
+                    );
+
+            case TRANSFER -> {
+                // Later
+            }
+        }
+
+        account.setAvailableBalance(account.getBalance());
+        accountRepository.save(account);
+        transaction = transactionRepository.save(transaction);
+        return transactionMapper.toResponse(transaction);
+
+
+
+    }
+
+    @Override
+    public void deleteTransaction(User currentUser, UUID transactionId) {
+        Transaction transaction = transactionRepository
+                .findByIdAndAccountUserId(transactionId,currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFound("Transaction not found"));
+
+        Account account = transaction.getAccount();
+        switch (transaction.getType()) {
+            case CREDIT ->
+                account.setBalance(account.getBalance().subtract(transaction.getAmount()));
+            case DEBIT ->
+                account.setBalance(account.getBalance().add(transaction.getAmount()));
+            case TRANSFER -> {
+                // will implement later
+            }
+        }
+        account.setAvailableBalance(account.getBalance());
+        accountRepository.save(account);
+        transactionRepository.delete(transaction);
+
     }
 }
