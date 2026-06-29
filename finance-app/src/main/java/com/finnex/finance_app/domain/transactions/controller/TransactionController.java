@@ -5,15 +5,20 @@ import com.finnex.finance_app.common.response.PagedResponse;
 import com.finnex.finance_app.domain.transactions.dto.request.CreateTransactionRequest;
 import com.finnex.finance_app.domain.transactions.dto.request.UpdateTransactionRequest;
 import com.finnex.finance_app.domain.transactions.dto.response.TransactionResponse;
+import com.finnex.finance_app.domain.transactions.dto.response.TransactionSummaryResponse;
 import com.finnex.finance_app.domain.transactions.service.TransactionService;
 import com.finnex.finance_app.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.UUID;
 
 @RestController
@@ -84,5 +89,38 @@ public class TransactionController {
                 null,
                 "Transaction deleted successfully"
         );
+    }
+
+    @GetMapping("/summary")
+    public ApiResponse<TransactionSummaryResponse> getTransactionSummary(
+            @AuthenticationPrincipal User user
+    ){
+        return ApiResponse.ok(
+                transactionService.getTransactionSummary(user),
+                "Transaction summary fetched successfully"
+        );
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportTransactions(
+            @AuthenticationPrincipal User currentUser
+    ) throws IOException {
+
+        byte[] excel =
+                transactionService.exportTransaction(
+                        currentUser
+                );
+
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=transactions.xlsx"
+                )
+                .contentType(
+                        MediaType.parseMediaType(
+                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                )
+                .body(excel);
     }
 }
