@@ -20,6 +20,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
      Optional<Transaction> findByIdAndAccountUserId(UUID transactionId, UUID userId);
      Page<Transaction> findByAccount(Account account, Pageable pageable);
      Page<Transaction> findByAccountUserIdAndStatus(UUID id, TransactionStatus status, Pageable pageable);
+     Page<Transaction> findByAccountUserIdAndCategory(UUID id, TransactionCategory category, Pageable pageable);
      Page<Transaction> findByAccountUserIdAndTransactionDateBetween(UUID id,LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
      List<Transaction> findByAccountUserIdAndStatus(
              UUID userId, TransactionStatus status
@@ -31,8 +32,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
              UUID userId,
              TransactionType type
      );
-
-
-
-
+     List<Transaction> findByAccountOrderByTransactionDateAsc(Account account);
 }

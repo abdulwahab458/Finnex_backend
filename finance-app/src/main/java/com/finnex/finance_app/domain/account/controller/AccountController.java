@@ -1,11 +1,13 @@
 package com.finnex.finance_app.domain.account.controller;
 
 import com.finnex.finance_app.common.enums.AccountType;
+import com.finnex.finance_app.common.enums.BalancePeriod;
 import com.finnex.finance_app.common.response.ApiResponse;
 import com.finnex.finance_app.domain.account.Service.AccountService;
 import com.finnex.finance_app.domain.account.dto.request.CreateAccountRequest;
 import com.finnex.finance_app.domain.account.dto.request.UpdateAccountRequest;
 import com.finnex.finance_app.domain.account.dto.response.AccountResponse;
+import com.finnex.finance_app.domain.account.dto.response.BalanceHistory;
 import com.finnex.finance_app.domain.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -69,5 +71,15 @@ public class AccountController {
     ){
         accountService.deActivateAccount(user,id);
         return ApiResponse.ok(null,"Account Deleted Successfully");
+    }
+
+    @GetMapping("/{id}/history")
+    public ApiResponse<List<BalanceHistory>> getAccountBalanceHistory(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "M1")
+            BalancePeriod period
+    ){
+        return ApiResponse.ok(accountService.getBalanceHistory(user,id,period),"Account Updated Successfully");
     }
 }
