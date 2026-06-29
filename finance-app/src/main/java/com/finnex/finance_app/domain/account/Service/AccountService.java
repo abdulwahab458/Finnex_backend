@@ -1,9 +1,11 @@
 package com.finnex.finance_app.domain.account.Service;
 
 import com.finnex.finance_app.common.enums.AccountType;
+import com.finnex.finance_app.common.enums.BalancePeriod;
 import com.finnex.finance_app.domain.account.dto.request.CreateAccountRequest;
 import com.finnex.finance_app.domain.account.dto.request.UpdateAccountRequest;
 import com.finnex.finance_app.domain.account.dto.response.AccountResponse;
+import com.finnex.finance_app.domain.account.dto.response.BalanceHistory;
 import com.finnex.finance_app.domain.user.entity.User;
 
 import java.util.List;
@@ -15,5 +17,6 @@ public interface AccountService {
     AccountResponse getAccountById(User currentUser, UUID id);
     AccountResponse updateAccount(User currentUser, UUID id, UpdateAccountRequest request);
     void deActivateAccount(User currentUser, UUID id);
+    List<BalanceHistory> getBalanceHistory(User currentUser, UUID accountId, BalancePeriod period);
 
 }
