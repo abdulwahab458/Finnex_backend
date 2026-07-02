@@ -38,6 +38,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionMapper transactionMapper;
     private  final TransactionExcelExporter transactionExcelExporter;
     @Override
+    @Transactional
     public TransactionResponse createTransaction(User user, CreateTransactionRequest request) {
         Account account = accountRepository
                 .findByUserAndId(
@@ -84,6 +85,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public TransactionResponse getTransactionById(User currentuser, UUID transactionId) {
         Transaction transaction = transactionRepository
                 .findByIdAndAccountUserId(transactionId,currentuser.getId())
@@ -93,6 +95,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public TransactionResponse updateTransaction(User curretUser, UUID transactionId, UpdateTransactionRequest request) {
         Transaction transaction = transactionRepository
                 .findByIdAndAccountUserId(transactionId,curretUser.getId())
@@ -139,6 +142,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public void deleteTransaction(User currentUser, UUID transactionId) {
         Transaction transaction = transactionRepository
                 .findByIdAndAccountUserId(transactionId,currentUser.getId())
@@ -153,6 +157,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public TransactionSummaryResponse getTransactionSummary(User currentUser) {
         List<Account> accounts = accountRepository.findByUser(currentUser);
         BigDecimal totalBalance = accounts
@@ -210,6 +215,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public byte[] exportTransaction(User currentUser) throws IOException {
         List<Transaction> transactions = transactionRepository.findByAccountUserId(currentUser.getId());
         return  transactionExcelExporter.export(transactions);
