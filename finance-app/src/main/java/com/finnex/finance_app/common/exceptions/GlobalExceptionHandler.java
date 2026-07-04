@@ -106,4 +106,15 @@ public class GlobalExceptionHandler {
                         "INTERNAL_SERVER_ERROR"
                 ));
     }
+
+    @ExceptionHandler(ExternalServiceException.class)
+    public ResponseEntity<ApiResponse<Void>> handleExternalServiceException(
+            ExternalServiceException ex
+    ) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ApiResponse.error(
+                        ex.getMessage(),
+                        "EXTERNAL_SERVICE_ERROR"
+                ));
+    }
 }

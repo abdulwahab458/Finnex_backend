@@ -8,10 +8,11 @@ import org.springframework.stereotype.Repository;
 import org.w3c.dom.stylesheets.LinkStyle;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
     List<Portfolio> findByUser(User user);
-    List<Portfolio> findByIdAndUser(UUID id, User user);
+    Optional<Portfolio> findByIdAndUser(UUID id, User user);
 }

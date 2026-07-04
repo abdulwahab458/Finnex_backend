@@ -21,7 +21,9 @@ public interface StockHoldingRepository extends JpaRepository<StockHolding, UUID
             Portfolio portfolio
     );
 
-    boolean existsByPortfolioAndStock(
+    boolean existsByPortfolio(Portfolio portfolio);
+
+    Optional<StockHolding> findByPortfolioAndStock(
             Portfolio portfolio,
             Stock stock
     );
