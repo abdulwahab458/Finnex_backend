@@ -7,5 +7,6 @@ import java.math.BigDecimal;
 @Data
 public class PortfolioAllocationResponse {
     private String sector;
+    private BigDecimal currentValue;
     private BigDecimal percentage;
 }

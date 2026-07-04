@@ -21,3 +21,10 @@ app:
     access-token-expiration: 900000
     refresh-token-expiration: 604800000
     issuer: smart-finance-api
+
+
+stock:
+  api:
+    key: d938921r01qq79pbk05gd938921r01qq79pbk060
+    base-url: https://finnhub.io/api/v1
+
