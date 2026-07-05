@@ -7,10 +7,10 @@ import org.springframework.web.client.RestClient;
 
 @Configuration
 @RequiredArgsConstructor
-public class StockApiConfig {
-    private final StockApiProperties stockApiProperties;
+public class FinnhubApiConfig {
+    private final FinnhubApiProperties finnhubApiProperties;
     @Bean
-    public RestClient stockApiRestClient(RestClient.Builder builder) {
-        return builder.baseUrl(stockApiProperties.getBaseUrl()).build();
+    public RestClient finnhubApiRestClient(RestClient.Builder builder) {
+        return builder.baseUrl(finnhubApiProperties.getBaseUrl()).build();
     }
 }

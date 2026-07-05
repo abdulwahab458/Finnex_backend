@@ -1,8 +1,10 @@
 package com.finnex.finance_app.domain.portfolio.Controller;
 
+import com.finnex.finance_app.common.enums.PortfolioPerformancePeriod;
 import com.finnex.finance_app.common.response.ApiResponse;
 import com.finnex.finance_app.domain.portfolio.dto.reponse.HoldingResponse;
 import com.finnex.finance_app.domain.portfolio.dto.reponse.PortfolioAllocationResponse;
+import com.finnex.finance_app.domain.portfolio.dto.reponse.PortfolioPerformanceResponse;
 import com.finnex.finance_app.domain.portfolio.dto.reponse.PortfolioResponse;
 import com.finnex.finance_app.domain.portfolio.dto.request.CreateHoldingRequest;
 import com.finnex.finance_app.domain.portfolio.dto.request.CreatePortfolioRequest;
@@ -141,6 +143,29 @@ public class PortfolioController {
         return ApiResponse.ok(
                 portfolioService.getPortfolioAllocation(user,portfolioId),
                 "Portfolio allocation fetched"
+        );
+    }
+
+
+    @GetMapping("/{portfolioId}/performance")
+    public ApiResponse<PortfolioPerformanceResponse> getPortfolioPerformance(
+            @AuthenticationPrincipal User currentUser,
+
+            @PathVariable UUID portfolioId,
+
+            @RequestParam(
+                    defaultValue = "M1"
+            )
+            PortfolioPerformancePeriod period
+    ) {
+
+        return ApiResponse.ok(
+                portfolioService.getPortfolioPeformance(
+                        currentUser,
+                        portfolioId,
+                        period
+                ),
+                "Portfolio performance fetched successfully."
         );
     }
 

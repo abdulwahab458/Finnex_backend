@@ -1,13 +1,14 @@
 package com.finnex.finance_app.domain.portfolio.service;
 
+import com.finnex.finance_app.common.enums.PortfolioPerformancePeriod;
 import com.finnex.finance_app.domain.portfolio.dto.reponse.HoldingResponse;
 import com.finnex.finance_app.domain.portfolio.dto.reponse.PortfolioAllocationResponse;
+import com.finnex.finance_app.domain.portfolio.dto.reponse.PortfolioPerformanceResponse;
 import com.finnex.finance_app.domain.portfolio.dto.reponse.PortfolioResponse;
 import com.finnex.finance_app.domain.portfolio.dto.request.CreateHoldingRequest;
 import com.finnex.finance_app.domain.portfolio.dto.request.CreatePortfolioRequest;
 import com.finnex.finance_app.domain.portfolio.dto.request.UpdateHoldingRequest;
 import com.finnex.finance_app.domain.portfolio.dto.request.UpdatePortfolioRequest;
-import com.finnex.finance_app.domain.portfolio.entity.Portfolio;
 import com.finnex.finance_app.domain.user.entity.User;
 
 import java.util.List;
@@ -33,5 +34,9 @@ public interface PortfolioService {
     void deleteHolding(User currentUser, UUID portfolioId, UUID holdingId);
 
     List<PortfolioAllocationResponse> getPortfolioAllocation(User currentUser, UUID portfolioId);
+
+    PortfolioPerformanceResponse getPortfolioPeformance(User currentUser, UUID portfolioId, PortfolioPerformancePeriod period);
+
+
 
 }
