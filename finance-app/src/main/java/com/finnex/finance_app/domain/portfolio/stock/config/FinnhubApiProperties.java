@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 @Data
 @Component
 @ConfigurationProperties(prefix = "stock.api")
-public class StockApiProperties {
+public class FinnhubApiProperties {
     private String key;
     private String baseUrl;
 }

@@ -28,3 +28,7 @@ stock:
     key: d938921r01qq79pbk05gd938921r01qq79pbk060
     base-url: https://finnhub.io/api/v1
 
+alphavantagestock:
+  alpha-vantage:
+    base-url: https://www.alphavantage.co
+    key: LTDWIHZQ9CYDJH04

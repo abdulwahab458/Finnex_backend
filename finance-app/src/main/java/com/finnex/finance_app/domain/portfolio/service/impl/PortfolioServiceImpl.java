@@ -1,11 +1,10 @@
 package com.finnex.finance_app.domain.portfolio.service.impl;
 
+import com.finnex.finance_app.common.enums.PortfolioPerformancePeriod;
 import com.finnex.finance_app.common.exceptions.BadRequestException;
 import com.finnex.finance_app.common.exceptions.DuplicateResourceException;
 import com.finnex.finance_app.common.exceptions.ResourceNotFound;
-import com.finnex.finance_app.domain.portfolio.dto.reponse.HoldingResponse;
-import com.finnex.finance_app.domain.portfolio.dto.reponse.PortfolioAllocationResponse;
-import com.finnex.finance_app.domain.portfolio.dto.reponse.PortfolioResponse;
+import com.finnex.finance_app.domain.portfolio.dto.reponse.*;
 import com.finnex.finance_app.domain.portfolio.dto.request.CreateHoldingRequest;
 import com.finnex.finance_app.domain.portfolio.dto.request.CreatePortfolioRequest;
 import com.finnex.finance_app.domain.portfolio.dto.request.UpdateHoldingRequest;
@@ -19,20 +18,22 @@ import com.finnex.finance_app.domain.portfolio.repository.PortfolioRepository;
 import com.finnex.finance_app.domain.portfolio.repository.StockHoldingRepository;
 import com.finnex.finance_app.domain.portfolio.repository.StockRepository;
 import com.finnex.finance_app.domain.portfolio.service.PortfolioService;
+import com.finnex.finance_app.domain.portfolio.stock.dto.StockCandelResponse;
 import com.finnex.finance_app.domain.portfolio.stock.service.StockApiService;
+import com.finnex.finance_app.domain.portfolio.util.PerformanceDateRange;
+import com.finnex.finance_app.domain.portfolio.util.PortfolioPerformanceUtil;
 import com.finnex.finance_app.domain.user.entity.User;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.sound.sampled.Port;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -348,6 +349,110 @@ public class PortfolioServiceImpl implements PortfolioService {
 
                 })
                 .toList();
+
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PortfolioPerformanceResponse getPortfolioPeformance(User currentUser, UUID portfolioId, PortfolioPerformancePeriod period) {
+        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId,currentUser).orElseThrow(
+                () -> new ResourceNotFound("Portfolio not found.")
+        );
+        List<StockHolding> holdings =
+                stockHoldingRepository.findByPortfolio(portfolio);
+
+        if (holdings.isEmpty()) {
+            PortfolioPerformanceResponse response =
+                    new PortfolioPerformanceResponse();
+
+            response.setTimeline(List.of());
+            response.setMinPortfolioValue(BigDecimal.ZERO);
+            response.setMaxPortfolioValue(BigDecimal.ZERO);
+
+            return response;
+        }
+        PerformanceDateRange range =
+                PortfolioPerformanceUtil.getDateRange(period);
+
+        Map<LocalDate, BigDecimal> portfolioTimeline =
+                new TreeMap<>();
+
+        for (StockHolding holding : holdings) {
+
+            StockCandelResponse candles =
+                    stockApiService.getHistoricalCandles(
+                            holding.getStock().getSymbol(),
+                            range.from(),
+                            range.to(),
+                            range.fullHistory()
+                    );
+
+            if (candles == null
+                    || !"ok".equalsIgnoreCase(candles.getStatus())
+                    || candles.getClosePrices() == null
+                    || candles.getTimestamps() == null) {
+                continue;
+            }
+
+            List<BigDecimal> closePrices = candles.getClosePrices();
+            List<Long> timestamps = candles.getTimestamps();
+
+            for (int i = 0; i < timestamps.size(); i++) {
+
+                LocalDate date =
+                        Instant.ofEpochSecond(
+                                        timestamps.get(i)
+                                )
+                                .atZone(ZoneOffset.UTC)
+                                .toLocalDate();
+
+                BigDecimal holdingValue =
+                        closePrices.get(i)
+                                .multiply(
+                                        BigDecimal.valueOf(
+                                                holding.getQuantity()
+                                        )
+                                );
+
+                portfolioTimeline.merge(
+                        date,
+                        holdingValue,
+                        BigDecimal::add
+                );
+            }
+        }
+
+        List<PortfolioPerformancePoint> timeline =
+                portfolioTimeline.entrySet()
+                        .stream()
+                        .map(entry ->
+                                new PortfolioPerformancePoint(
+                                        entry.getKey(),
+                                        entry.getValue()
+                                )
+                        )
+                        .toList();
+
+        BigDecimal minPortfolioValue =
+                portfolioTimeline.values()
+                        .stream()
+                        .min(BigDecimal::compareTo)
+                        .orElse(BigDecimal.ZERO);
+
+        BigDecimal maxPortfolioValue =
+                portfolioTimeline.values()
+                        .stream()
+                        .max(BigDecimal::compareTo)
+                        .orElse(BigDecimal.ZERO);
+
+        PortfolioPerformanceResponse response =
+                new PortfolioPerformanceResponse();
+
+        response.setTimeline(timeline);
+        response.setMinPortfolioValue(minPortfolioValue);
+        response.setMaxPortfolioValue(maxPortfolioValue);
+
+        return response;
 
     }
 
