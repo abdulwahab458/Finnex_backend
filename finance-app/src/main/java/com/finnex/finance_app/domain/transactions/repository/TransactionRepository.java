@@ -5,10 +5,12 @@ import com.finnex.finance_app.common.enums.TransactionStatus;
 import com.finnex.finance_app.common.enums.TransactionType;
 import com.finnex.finance_app.domain.account.entity.Account;
 import com.finnex.finance_app.domain.transactions.entity.Transaction;
+import com.finnex.finance_app.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -33,4 +35,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
              TransactionType type
      );
      List<Transaction> findByAccountOrderByTransactionDateAsc(Account account);
+
+     List<Transaction> findByAccount_UserAndCategoryAndTransactionDateBetween(
+             User user,
+             TransactionCategory category,
+             LocalDateTime startDate,
+             LocalDateTime endDate
+     );
 }

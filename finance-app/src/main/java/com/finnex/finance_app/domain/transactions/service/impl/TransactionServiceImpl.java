@@ -7,6 +7,7 @@ import com.finnex.finance_app.common.exceptions.ResourceNotFound;
 import com.finnex.finance_app.common.response.PagedResponse;
 import com.finnex.finance_app.domain.account.Repository.AccountRepository;
 import com.finnex.finance_app.domain.account.entity.Account;
+import com.finnex.finance_app.domain.financial_planning.budgets.service.BudgetService;
 import com.finnex.finance_app.domain.transactions.dto.request.CreateTransactionRequest;
 import com.finnex.finance_app.domain.transactions.dto.request.UpdateTransactionRequest;
 import com.finnex.finance_app.domain.transactions.dto.response.TransactionResponse;
@@ -36,6 +37,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final TransactionMapper transactionMapper;
+    private final BudgetService budgetService;
     private  final TransactionExcelExporter transactionExcelExporter;
     @Override
     @Transactional
@@ -61,6 +63,7 @@ public class TransactionServiceImpl implements TransactionService {
         account.setAvailableBalance(account.getBalance());
         accountRepository.save(account);
         transaction = transactionRepository.save(transaction);
+        budgetService.updateBudgetAfterTransactionCreate(transaction);
 
         return transactionMapper.toResponse(transaction);
     }
@@ -101,6 +104,14 @@ public class TransactionServiceImpl implements TransactionService {
                 .findByIdAndAccountUserId(transactionId,curretUser.getId())
                 .orElseThrow(() -> new ResourceNotFound("Transaction not found"));
 
+        Transaction oldTransaction = new Transaction();
+
+        oldTransaction.setAccount(transaction.getAccount());
+        oldTransaction.setAmount(transaction.getAmount());
+        oldTransaction.setCategory(transaction.getCategory());
+        oldTransaction.setType(transaction.getType());
+        oldTransaction.setTransactionDate(transaction.getTransactionDate());
+
         Account account = transaction.getAccount();
         reverseTransaction(account,transaction.getType(),transaction.getAmount());
         //transaction Update
@@ -135,9 +146,8 @@ public class TransactionServiceImpl implements TransactionService {
         account.setAvailableBalance(account.getBalance());
         accountRepository.save(account);
         transaction = transactionRepository.save(transaction);
+        budgetService.updateBudgetAfterTransactionUpdate(oldTransaction,transaction);
         return transactionMapper.toResponse(transaction);
-
-
 
     }
 
@@ -152,6 +162,7 @@ public class TransactionServiceImpl implements TransactionService {
         reverseTransaction(account,transaction.getType(),transaction.getAmount());
         account.setAvailableBalance(account.getBalance());
         accountRepository.save(account);
+        budgetService.updateBudgetAfterTransactionDelete(transaction);
         transactionRepository.delete(transaction);
 
     }
