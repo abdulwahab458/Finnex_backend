@@ -42,4 +42,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
              LocalDateTime startDate,
              LocalDateTime endDate
      );
+
+     List<Transaction> findByAccountUserIdAndTypeAndStatusAndTransactionDateBetween(
+             UUID userId,
+             TransactionType type,
+             TransactionStatus status,
+             LocalDateTime startDate,
+             LocalDateTime endDate
+     );
 }
