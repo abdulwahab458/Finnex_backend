@@ -1,20 +1,17 @@
 package com.finnex.finance_app.domain.dashboard.service.impl;
 
-import com.finnex.finance_app.common.enums.BudgetStatus;
-import com.finnex.finance_app.common.enums.TransactionStatus;
-import com.finnex.finance_app.common.enums.TransactionType;
+import com.finnex.finance_app.common.enums.*;
 import com.finnex.finance_app.domain.account.Repository.AccountRepository;
 import com.finnex.finance_app.domain.account.entity.Account;
-import com.finnex.finance_app.domain.dashboard.dto.BudgetSummaryResponse;
-import com.finnex.finance_app.domain.dashboard.dto.DashboardResponse;
-import com.finnex.finance_app.domain.dashboard.dto.FinancialOverviewResponse;
-import com.finnex.finance_app.domain.dashboard.dto.PortfolioSummaryResponse;
+import com.finnex.finance_app.domain.dashboard.dto.*;
 import com.finnex.finance_app.domain.dashboard.service.DashboardService;
 import com.finnex.finance_app.domain.financial_planning.budgets.dto.response.BudgetResponse;
 import com.finnex.finance_app.domain.financial_planning.budgets.entity.Budget;
 import com.finnex.finance_app.domain.financial_planning.budgets.repository.BudgetRepository;
 import com.finnex.finance_app.domain.financial_planning.budgets.service.BudgetService;
+import com.finnex.finance_app.domain.financial_planning.goals.dto.response.GoalResponse;
 import com.finnex.finance_app.domain.financial_planning.goals.repository.GoalRepository;
+import com.finnex.finance_app.domain.financial_planning.goals.service.GoalsService;
 import com.finnex.finance_app.domain.portfolio.dto.reponse.PortfolioResponse;
 import com.finnex.finance_app.domain.portfolio.repository.PortfolioRepository;
 import com.finnex.finance_app.domain.portfolio.service.PortfolioService;
@@ -23,6 +20,7 @@ import com.finnex.finance_app.domain.transactions.repository.TransactionReposito
 import com.finnex.finance_app.domain.user.entity.User;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.repository.core.support.RepositoryMethodInvocationListener;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -39,12 +37,15 @@ public class DashboardServiceImpl implements DashboardService {
     private final TransactionRepository transactionRepository;
     private final PortfolioService portfolioService;
     private final BudgetService budgetService;
+    private final GoalsService goalsService;
 
     private final PortfolioRepository portfolioRepository;
 
     private final BudgetRepository budgetRepository;
 
     private final GoalRepository goalRepository;
+    private final RepositoryMethodInvocationListener repositoryMethodInvocationListener;
+
 
     @Override
     public DashboardResponse getDashboard(User user) {
@@ -56,6 +57,8 @@ public class DashboardServiceImpl implements DashboardService {
         response.setBudgetSummary(
                 buildBudgetSummary(user)
         );
+        response.setGoalSummary(buildGoalSummary(user));
+        response.setFinancialHealth(buildFinancialHealth(response));
         return response;
     }
 
@@ -239,6 +242,133 @@ public class DashboardServiceImpl implements DashboardService {
         response.setOverBudget(overBudget);
         response.setTotalBudgetAmount(totalBudget);
         response.setTotalSpent(totalSpent);
+        return response;
+    }
+
+    private GoalSummaryResponse buildGoalSummary(User user){
+        GoalSummaryResponse response = new GoalSummaryResponse();
+        List<GoalResponse> goals = goalsService.findAllGoals(user);
+        int completed = Math.toIntExact(goals.stream()
+                .filter(goal -> goal.getStatus().equals(GoalStatus.COMPLETED))
+                .count());
+        int inProgress = Math.toIntExact(goals.stream()
+                .filter(goal -> goal.getStatus().equals(GoalStatus.IN_PROGRESS))
+                .count());
+
+        BigDecimal totalSavedAmount = goals.stream()
+                .map(GoalResponse::getCurrentAmount)
+                .reduce(
+                        BigDecimal.ZERO,
+                        BigDecimal::add
+                );
+        BigDecimal totalTargetAmount = goals.stream()
+                .map(GoalResponse::getTargetAmount)
+                .reduce(
+                        BigDecimal.ZERO,
+                        BigDecimal::add
+                );
+
+
+
+        response.setTotalSavedAmount(totalSavedAmount);
+        response.setTotalGoals(goals.size());
+        response.setCompletedGoals(completed);
+        response.setInProgressGoals(inProgress);
+        response.setTotalSavedAmount(totalSavedAmount);
+        response.setTotalTargetAmount(totalTargetAmount);
+
+        return response;
+    }
+
+    private FinancialHealthResponse buildFinancialHealth(
+            DashboardResponse dashboardResponse
+    ) {
+
+        FinancialHealthResponse response =
+                new FinancialHealthResponse();
+        BigDecimal savingsRate =
+                dashboardResponse
+                        .getFinancialOverview()
+                        .getSavingsRate();
+        int score = 0;
+        if (savingsRate.compareTo(BigDecimal.valueOf(30)) >= 0) {
+
+            score += 40;
+
+        } else if (savingsRate.compareTo(BigDecimal.valueOf(20)) >= 0) {
+
+            score += 30;
+
+        } else if (savingsRate.compareTo(BigDecimal.valueOf(10)) >= 0) {
+
+            score += 20;
+
+        } else if (savingsRate.compareTo(BigDecimal.ZERO) > 0) {
+
+            score += 10;
+
+        }
+        BudgetSummaryResponse budgetSummary =
+                dashboardResponse.getBudgetSummary();
+        int totalBudgets = budgetSummary.getTotalBudgets();
+        int onTrack = budgetSummary.getOnTrack();
+        BigDecimal budgetPercentage =
+                BigDecimal.valueOf(onTrack)
+                        .divide(
+                                BigDecimal.valueOf(totalBudgets),
+                                4,
+                                RoundingMode.HALF_UP
+                        )
+                        .multiply(BigDecimal.valueOf(30));
+        score += budgetPercentage.intValue();
+
+        GoalSummaryResponse goalSummary =
+                dashboardResponse.getGoalSummary();
+        int totalGoals = goalSummary.getTotalGoals();
+
+        int completedGoals = goalSummary.getCompletedGoals();
+        if (totalGoals > 0) {
+
+            BigDecimal goalPercentage =
+                    BigDecimal.valueOf(completedGoals)
+                            .divide(
+                                    BigDecimal.valueOf(totalGoals),
+                                    4,
+                                    RoundingMode.HALF_UP
+                            )
+                            .multiply(BigDecimal.valueOf(20));
+
+            score += goalPercentage.intValue();
+        }
+        PortfolioSummaryResponse portfolioSummary =
+                dashboardResponse.getPortfolioSummary();
+
+        if (portfolioSummary.getTotalInvested()
+                .compareTo(BigDecimal.ZERO) > 0) {
+
+            score += 10;
+        }
+        FinancialHealthStatus status;
+
+        if (score >= 90) {
+
+            status = FinancialHealthStatus.EXCELLENT;
+
+        } else if (score >= 75) {
+
+            status = FinancialHealthStatus.GOOD;
+
+        } else if (score >= 50) {
+
+            status = FinancialHealthStatus.FAIR;
+
+        } else {
+
+            status = FinancialHealthStatus.NEEDS_IMPROVEMENT;
+
+        }
+        response.setScore(score);
+        response.setStatus(status);
         return response;
     }
 
