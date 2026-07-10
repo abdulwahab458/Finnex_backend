@@ -6,7 +6,6 @@ import com.finnex.finance_app.domain.account.entity.Account;
 import com.finnex.finance_app.domain.dashboard.dto.*;
 import com.finnex.finance_app.domain.dashboard.service.DashboardService;
 import com.finnex.finance_app.domain.financial_planning.budgets.dto.response.BudgetResponse;
-import com.finnex.finance_app.domain.financial_planning.budgets.entity.Budget;
 import com.finnex.finance_app.domain.financial_planning.budgets.repository.BudgetRepository;
 import com.finnex.finance_app.domain.financial_planning.budgets.service.BudgetService;
 import com.finnex.finance_app.domain.financial_planning.goals.dto.response.GoalResponse;
@@ -18,7 +17,6 @@ import com.finnex.finance_app.domain.portfolio.service.PortfolioService;
 import com.finnex.finance_app.domain.transactions.entity.Transaction;
 import com.finnex.finance_app.domain.transactions.repository.TransactionRepository;
 import com.finnex.finance_app.domain.user.entity.User;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.repository.core.support.RepositoryMethodInvocationListener;
 import org.springframework.stereotype.Service;
@@ -28,7 +26,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
+import java.time.YearMonth;
+import java.time.format.TextStyle;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,13 +39,6 @@ public class DashboardServiceImpl implements DashboardService {
     private final PortfolioService portfolioService;
     private final BudgetService budgetService;
     private final GoalsService goalsService;
-
-    private final PortfolioRepository portfolioRepository;
-
-    private final BudgetRepository budgetRepository;
-
-    private final GoalRepository goalRepository;
-    private final RepositoryMethodInvocationListener repositoryMethodInvocationListener;
 
 
     @Override
@@ -60,6 +54,167 @@ public class DashboardServiceImpl implements DashboardService {
         response.setGoalSummary(buildGoalSummary(user));
         response.setFinancialHealth(buildFinancialHealth(response));
         return response;
+    }
+
+    @Override
+    public CashFlowResponse getCashFlow(User user) {
+        LocalDate today = LocalDate.now();
+        LocalDateTime startDate =
+                today.minusMonths(5)
+                        .withDayOfMonth(1)
+                        .atStartOfDay();
+
+        LocalDateTime endDate =
+                today.withDayOfMonth(today.lengthOfMonth())
+                        .atTime(LocalTime.MAX);
+
+        List<Transaction> transactions = transactionRepository.findByAccountUserIdAndStatusAndTransactionDateBetween(
+                user.getId(),
+                TransactionStatus.COMPLETED,
+                startDate,
+                endDate
+        );
+
+        Map<YearMonth, CashFlowPointResponse> cashFlowMap = new LinkedHashMap<>();
+
+        YearMonth currentMonth = YearMonth.now();
+
+        for (int i = 5; i >= 0; i--) {
+
+            YearMonth month = currentMonth.minusMonths(i);
+
+            CashFlowPointResponse point = new CashFlowPointResponse();
+
+            point.setPeriod(
+                    month.getMonth()
+                            .getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+            );
+
+            point.setIncome(BigDecimal.ZERO);
+            point.setExpense(BigDecimal.ZERO);
+
+            cashFlowMap.put(month, point);
+        }
+
+// Populate the monthly buckets
+        for (Transaction transaction : transactions) {
+
+            YearMonth month =
+                    YearMonth.from(transaction.getTransactionDate());
+
+            CashFlowPointResponse point = cashFlowMap.get(month);
+
+            if (point == null) {
+                continue;
+            }
+
+            if (transaction.getType() == TransactionType.CREDIT) {
+
+                point.setIncome(
+                        point.getIncome()
+                                .add(transaction.getAmount())
+                );
+
+            } else if (transaction.getType() == TransactionType.DEBIT) {
+
+                point.setExpense(
+                        point.getExpense()
+                                .add(transaction.getAmount())
+                );
+            }
+        }
+
+        CashFlowResponse response = new CashFlowResponse();
+
+        response.setTimeline(
+                new ArrayList<>(cashFlowMap.values())
+        );
+
+        return response;
+
+
+    }
+
+    @Override
+    public List<TopCategoryResponse> getTopCategory(User user) {
+        LocalDate today = LocalDate.now();
+
+        LocalDateTime startOfMonth =
+                today.withDayOfMonth(1)
+                        .atStartOfDay();
+
+        LocalDateTime endOfMonth =
+                today.withDayOfMonth(today.lengthOfMonth())
+                        .atTime(LocalTime.MAX);
+
+        List<Transaction> transactions = transactionRepository.findByAccountUserIdAndTypeAndStatusAndTransactionDateBetween(
+                user.getId(),
+                TransactionType.DEBIT,
+                TransactionStatus.COMPLETED,
+                startOfMonth,
+                endOfMonth
+        );
+
+        Map<TransactionCategory, BigDecimal> categoryTotals =
+                transactions.stream()
+                        .collect(
+                                Collectors.groupingBy(
+                                        Transaction::getCategory,
+                                        Collectors.reducing(
+                                                BigDecimal.ZERO,
+                                                Transaction::getAmount,
+                                                BigDecimal::add
+                                        )
+                                )
+                        );
+
+        return categoryTotals.entrySet()
+                .stream()
+                .sorted(
+                        Map.Entry.<TransactionCategory, BigDecimal>comparingByValue()
+                                .reversed()
+                )
+                .limit(5)
+                .map(entry -> {
+
+                    TopCategoryResponse response =
+                            new TopCategoryResponse();
+
+                    response.setCategory(entry.getKey());
+                    response.setAmount(entry.getValue());
+
+                    return response;
+
+                })
+                .toList();
+
+    }
+
+    @Override
+    public List<RecentActivityResponse> getRecentActivities(User user) {
+        List<Transaction> transactions =
+                transactionRepository
+                        .findTop5ByAccountUserIdOrderByTransactionDateDesc(
+                                user.getId()
+                        );
+        return transactions.stream()
+                .map(transaction -> {
+
+                    RecentActivityResponse response =
+                            new RecentActivityResponse();
+
+                    response.setTransactionId(transaction.getId());
+                    response.setTitle(transaction.getMerchantName());
+                    response.setCategory(transaction.getCategory());
+                    response.setType(transaction.getType());
+                    response.setAmount(transaction.getAmount());
+                    response.setTransactionDate(transaction.getTransactionDate());
+
+                    return response;
+
+                })
+                .toList();
+
     }
 
     //helpers
