@@ -1,28 +1,24 @@
 package com.finnex.finance_app.domain.dashboard.service.impl;
 
-import com.finnex.finance_app.common.enums.BudgetStatus;
-import com.finnex.finance_app.common.enums.TransactionStatus;
-import com.finnex.finance_app.common.enums.TransactionType;
+import com.finnex.finance_app.common.enums.*;
 import com.finnex.finance_app.domain.account.Repository.AccountRepository;
 import com.finnex.finance_app.domain.account.entity.Account;
-import com.finnex.finance_app.domain.dashboard.dto.BudgetSummaryResponse;
-import com.finnex.finance_app.domain.dashboard.dto.DashboardResponse;
-import com.finnex.finance_app.domain.dashboard.dto.FinancialOverviewResponse;
-import com.finnex.finance_app.domain.dashboard.dto.PortfolioSummaryResponse;
+import com.finnex.finance_app.domain.dashboard.dto.*;
 import com.finnex.finance_app.domain.dashboard.service.DashboardService;
 import com.finnex.finance_app.domain.financial_planning.budgets.dto.response.BudgetResponse;
-import com.finnex.finance_app.domain.financial_planning.budgets.entity.Budget;
 import com.finnex.finance_app.domain.financial_planning.budgets.repository.BudgetRepository;
 import com.finnex.finance_app.domain.financial_planning.budgets.service.BudgetService;
+import com.finnex.finance_app.domain.financial_planning.goals.dto.response.GoalResponse;
 import com.finnex.finance_app.domain.financial_planning.goals.repository.GoalRepository;
+import com.finnex.finance_app.domain.financial_planning.goals.service.GoalsService;
 import com.finnex.finance_app.domain.portfolio.dto.reponse.PortfolioResponse;
 import com.finnex.finance_app.domain.portfolio.repository.PortfolioRepository;
 import com.finnex.finance_app.domain.portfolio.service.PortfolioService;
 import com.finnex.finance_app.domain.transactions.entity.Transaction;
 import com.finnex.finance_app.domain.transactions.repository.TransactionRepository;
 import com.finnex.finance_app.domain.user.entity.User;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.repository.core.support.RepositoryMethodInvocationListener;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -30,7 +26,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
+import java.time.YearMonth;
+import java.time.format.TextStyle;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,12 +38,8 @@ public class DashboardServiceImpl implements DashboardService {
     private final TransactionRepository transactionRepository;
     private final PortfolioService portfolioService;
     private final BudgetService budgetService;
+    private final GoalsService goalsService;
 
-    private final PortfolioRepository portfolioRepository;
-
-    private final BudgetRepository budgetRepository;
-
-    private final GoalRepository goalRepository;
 
     @Override
     public DashboardResponse getDashboard(User user) {
@@ -56,7 +51,170 @@ public class DashboardServiceImpl implements DashboardService {
         response.setBudgetSummary(
                 buildBudgetSummary(user)
         );
+        response.setGoalSummary(buildGoalSummary(user));
+        response.setFinancialHealth(buildFinancialHealth(response));
         return response;
+    }
+
+    @Override
+    public CashFlowResponse getCashFlow(User user) {
+        LocalDate today = LocalDate.now();
+        LocalDateTime startDate =
+                today.minusMonths(5)
+                        .withDayOfMonth(1)
+                        .atStartOfDay();
+
+        LocalDateTime endDate =
+                today.withDayOfMonth(today.lengthOfMonth())
+                        .atTime(LocalTime.MAX);
+
+        List<Transaction> transactions = transactionRepository.findByAccountUserIdAndStatusAndTransactionDateBetween(
+                user.getId(),
+                TransactionStatus.COMPLETED,
+                startDate,
+                endDate
+        );
+
+        Map<YearMonth, CashFlowPointResponse> cashFlowMap = new LinkedHashMap<>();
+
+        YearMonth currentMonth = YearMonth.now();
+
+        for (int i = 5; i >= 0; i--) {
+
+            YearMonth month = currentMonth.minusMonths(i);
+
+            CashFlowPointResponse point = new CashFlowPointResponse();
+
+            point.setPeriod(
+                    month.getMonth()
+                            .getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+            );
+
+            point.setIncome(BigDecimal.ZERO);
+            point.setExpense(BigDecimal.ZERO);
+
+            cashFlowMap.put(month, point);
+        }
+
+// Populate the monthly buckets
+        for (Transaction transaction : transactions) {
+
+            YearMonth month =
+                    YearMonth.from(transaction.getTransactionDate());
+
+            CashFlowPointResponse point = cashFlowMap.get(month);
+
+            if (point == null) {
+                continue;
+            }
+
+            if (transaction.getType() == TransactionType.CREDIT) {
+
+                point.setIncome(
+                        point.getIncome()
+                                .add(transaction.getAmount())
+                );
+
+            } else if (transaction.getType() == TransactionType.DEBIT) {
+
+                point.setExpense(
+                        point.getExpense()
+                                .add(transaction.getAmount())
+                );
+            }
+        }
+
+        CashFlowResponse response = new CashFlowResponse();
+
+        response.setTimeline(
+                new ArrayList<>(cashFlowMap.values())
+        );
+
+        return response;
+
+
+    }
+
+    @Override
+    public List<TopCategoryResponse> getTopCategory(User user) {
+        LocalDate today = LocalDate.now();
+
+        LocalDateTime startOfMonth =
+                today.withDayOfMonth(1)
+                        .atStartOfDay();
+
+        LocalDateTime endOfMonth =
+                today.withDayOfMonth(today.lengthOfMonth())
+                        .atTime(LocalTime.MAX);
+
+        List<Transaction> transactions = transactionRepository.findByAccountUserIdAndTypeAndStatusAndTransactionDateBetween(
+                user.getId(),
+                TransactionType.DEBIT,
+                TransactionStatus.COMPLETED,
+                startOfMonth,
+                endOfMonth
+        );
+
+        Map<TransactionCategory, BigDecimal> categoryTotals =
+                transactions.stream()
+                        .collect(
+                                Collectors.groupingBy(
+                                        Transaction::getCategory,
+                                        Collectors.reducing(
+                                                BigDecimal.ZERO,
+                                                Transaction::getAmount,
+                                                BigDecimal::add
+                                        )
+                                )
+                        );
+
+        return categoryTotals.entrySet()
+                .stream()
+                .sorted(
+                        Map.Entry.<TransactionCategory, BigDecimal>comparingByValue()
+                                .reversed()
+                )
+                .limit(5)
+                .map(entry -> {
+
+                    TopCategoryResponse response =
+                            new TopCategoryResponse();
+
+                    response.setCategory(entry.getKey());
+                    response.setAmount(entry.getValue());
+
+                    return response;
+
+                })
+                .toList();
+
+    }
+
+    @Override
+    public List<RecentActivityResponse> getRecentActivities(User user) {
+        List<Transaction> transactions =
+                transactionRepository
+                        .findTop5ByAccountUserIdOrderByTransactionDateDesc(
+                                user.getId()
+                        );
+        return transactions.stream()
+                .map(transaction -> {
+
+                    RecentActivityResponse response =
+                            new RecentActivityResponse();
+
+                    response.setTransactionId(transaction.getId());
+                    response.setTitle(transaction.getMerchantName());
+                    response.setCategory(transaction.getCategory());
+                    response.setType(transaction.getType());
+                    response.setAmount(transaction.getAmount());
+                    response.setTransactionDate(transaction.getTransactionDate());
+
+                    return response;
+
+                })
+                .toList();
+
     }
 
     //helpers
@@ -239,6 +397,133 @@ public class DashboardServiceImpl implements DashboardService {
         response.setOverBudget(overBudget);
         response.setTotalBudgetAmount(totalBudget);
         response.setTotalSpent(totalSpent);
+        return response;
+    }
+
+    private GoalSummaryResponse buildGoalSummary(User user){
+        GoalSummaryResponse response = new GoalSummaryResponse();
+        List<GoalResponse> goals = goalsService.findAllGoals(user);
+        int completed = Math.toIntExact(goals.stream()
+                .filter(goal -> goal.getStatus().equals(GoalStatus.COMPLETED))
+                .count());
+        int inProgress = Math.toIntExact(goals.stream()
+                .filter(goal -> goal.getStatus().equals(GoalStatus.IN_PROGRESS))
+                .count());
+
+        BigDecimal totalSavedAmount = goals.stream()
+                .map(GoalResponse::getCurrentAmount)
+                .reduce(
+                        BigDecimal.ZERO,
+                        BigDecimal::add
+                );
+        BigDecimal totalTargetAmount = goals.stream()
+                .map(GoalResponse::getTargetAmount)
+                .reduce(
+                        BigDecimal.ZERO,
+                        BigDecimal::add
+                );
+
+
+
+        response.setTotalSavedAmount(totalSavedAmount);
+        response.setTotalGoals(goals.size());
+        response.setCompletedGoals(completed);
+        response.setInProgressGoals(inProgress);
+        response.setTotalSavedAmount(totalSavedAmount);
+        response.setTotalTargetAmount(totalTargetAmount);
+
+        return response;
+    }
+
+    private FinancialHealthResponse buildFinancialHealth(
+            DashboardResponse dashboardResponse
+    ) {
+
+        FinancialHealthResponse response =
+                new FinancialHealthResponse();
+        BigDecimal savingsRate =
+                dashboardResponse
+                        .getFinancialOverview()
+                        .getSavingsRate();
+        int score = 0;
+        if (savingsRate.compareTo(BigDecimal.valueOf(30)) >= 0) {
+
+            score += 40;
+
+        } else if (savingsRate.compareTo(BigDecimal.valueOf(20)) >= 0) {
+
+            score += 30;
+
+        } else if (savingsRate.compareTo(BigDecimal.valueOf(10)) >= 0) {
+
+            score += 20;
+
+        } else if (savingsRate.compareTo(BigDecimal.ZERO) > 0) {
+
+            score += 10;
+
+        }
+        BudgetSummaryResponse budgetSummary =
+                dashboardResponse.getBudgetSummary();
+        int totalBudgets = budgetSummary.getTotalBudgets();
+        int onTrack = budgetSummary.getOnTrack();
+        BigDecimal budgetPercentage =
+                BigDecimal.valueOf(onTrack)
+                        .divide(
+                                BigDecimal.valueOf(totalBudgets),
+                                4,
+                                RoundingMode.HALF_UP
+                        )
+                        .multiply(BigDecimal.valueOf(30));
+        score += budgetPercentage.intValue();
+
+        GoalSummaryResponse goalSummary =
+                dashboardResponse.getGoalSummary();
+        int totalGoals = goalSummary.getTotalGoals();
+
+        int completedGoals = goalSummary.getCompletedGoals();
+        if (totalGoals > 0) {
+
+            BigDecimal goalPercentage =
+                    BigDecimal.valueOf(completedGoals)
+                            .divide(
+                                    BigDecimal.valueOf(totalGoals),
+                                    4,
+                                    RoundingMode.HALF_UP
+                            )
+                            .multiply(BigDecimal.valueOf(20));
+
+            score += goalPercentage.intValue();
+        }
+        PortfolioSummaryResponse portfolioSummary =
+                dashboardResponse.getPortfolioSummary();
+
+        if (portfolioSummary.getTotalInvested()
+                .compareTo(BigDecimal.ZERO) > 0) {
+
+            score += 10;
+        }
+        FinancialHealthStatus status;
+
+        if (score >= 90) {
+
+            status = FinancialHealthStatus.EXCELLENT;
+
+        } else if (score >= 75) {
+
+            status = FinancialHealthStatus.GOOD;
+
+        } else if (score >= 50) {
+
+            status = FinancialHealthStatus.FAIR;
+
+        } else {
+
+            status = FinancialHealthStatus.NEEDS_IMPROVEMENT;
+
+        }
+        response.setScore(score);
+        response.setStatus(status);
         return response;
     }
 

@@ -19,6 +19,9 @@ import java.util.UUID;
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
      Page<Transaction> findByAccountUserId(UUID userId, Pageable pageable);
      List<Transaction> findByAccountUserId(UUID userId);
+     List<Transaction> findTop5ByAccountUserIdOrderByTransactionDateDesc(
+             UUID userId
+     );
      Optional<Transaction> findByIdAndAccountUserId(UUID transactionId, UUID userId);
      Page<Transaction> findByAccount(Account account, Pageable pageable);
      Page<Transaction> findByAccountUserIdAndStatus(UUID id, TransactionStatus status, Pageable pageable);
@@ -46,6 +49,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
      List<Transaction> findByAccountUserIdAndTypeAndStatusAndTransactionDateBetween(
              UUID userId,
              TransactionType type,
+             TransactionStatus status,
+             LocalDateTime startDate,
+             LocalDateTime endDate
+     );
+
+     List<Transaction> findByAccountUserIdAndStatusAndTransactionDateBetween(
+             UUID userId,
              TransactionStatus status,
              LocalDateTime startDate,
              LocalDateTime endDate
