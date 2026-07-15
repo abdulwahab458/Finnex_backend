@@ -21,6 +21,8 @@ app:
     access-token-expiration: 900000
     refresh-token-expiration: 604800000
     issuer: smart-finance-api
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
 
 
 stock:

@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Finnex_backend.iml" filepath="$PROJECT_DIR$/.idea/Finnex_backend.iml" />
-      <module fileurl="file://$PROJECT_DIR$/finance-app/finance-app.iml" filepath="$PROJECT_DIR$/finance-app/finance-app.iml" />
     </modules>
   </component>
 </project>
