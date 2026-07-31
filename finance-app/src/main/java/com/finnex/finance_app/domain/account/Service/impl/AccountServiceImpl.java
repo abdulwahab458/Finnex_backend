@@ -100,6 +100,9 @@ public class AccountServiceImpl implements AccountService {
         if(account.getBalance().compareTo(BigDecimal.ZERO)>0){
             throw  new BadRequestException("Transfer Funds to deactivate Account");
         }
+        if(account.getActive().equals(false)){
+            throw  new BadRequestException("Acccount has already been deactivated");
+        }
         account.setActive(false);
         account.setClosedDate(LocalDate.now());
         accountRepository.save(account);
