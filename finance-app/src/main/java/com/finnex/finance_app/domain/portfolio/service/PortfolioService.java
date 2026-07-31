@@ -9,6 +9,7 @@ import com.finnex.finance_app.domain.portfolio.dto.request.CreateHoldingRequest;
 import com.finnex.finance_app.domain.portfolio.dto.request.CreatePortfolioRequest;
 import com.finnex.finance_app.domain.portfolio.dto.request.UpdateHoldingRequest;
 import com.finnex.finance_app.domain.portfolio.dto.request.UpdatePortfolioRequest;
+import com.finnex.finance_app.domain.portfolio.stock.dto.SearchStockItem;
 import com.finnex.finance_app.domain.user.entity.User;
 
 import java.util.List;
@@ -36,6 +37,8 @@ public interface PortfolioService {
     List<PortfolioAllocationResponse> getPortfolioAllocation(User currentUser, UUID portfolioId);
 
     PortfolioPerformanceResponse getPortfolioPeformance(User currentUser, UUID portfolioId, PortfolioPerformancePeriod period);
+
+    List<SearchStockItem> searchStocks(String query);
 
 
 

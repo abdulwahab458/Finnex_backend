@@ -11,6 +11,8 @@ import com.finnex.finance_app.domain.portfolio.dto.request.CreatePortfolioReques
 import com.finnex.finance_app.domain.portfolio.dto.request.UpdateHoldingRequest;
 import com.finnex.finance_app.domain.portfolio.dto.request.UpdatePortfolioRequest;
 import com.finnex.finance_app.domain.portfolio.service.PortfolioService;
+import com.finnex.finance_app.domain.portfolio.stock.dto.SearchStockItem;
+import com.finnex.finance_app.domain.portfolio.stock.service.StockApiService;
 import com.finnex.finance_app.domain.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PortfolioController {
     private  final PortfolioService portfolioService;
+    private final StockApiService stockApiService;
 
     @GetMapping
     public ApiResponse<List<PortfolioResponse>> getAllPortfolios(
@@ -166,6 +169,17 @@ public class PortfolioController {
                         period
                 ),
                 "Portfolio performance fetched successfully."
+        );
+    }
+
+    @GetMapping("/search")
+    public ApiResponse<List<SearchStockItem>> searchStocks(
+            @AuthenticationPrincipal User user,
+            @RequestParam String symbol
+    ) {
+        return ApiResponse.ok(
+                stockApiService.searchStock(symbol),
+                "Stock retrieved"
         );
     }
 

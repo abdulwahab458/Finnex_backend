@@ -270,4 +270,35 @@ public class StockApiServiceImpl implements StockApiService {
 
         return candleResponse;
     }
+
+    @Override
+    public List<SearchStockItem> searchStock(String query) {
+        SearchStockResponse searchStockResponse;
+        try{
+            searchStockResponse =
+                    restClient.get()
+                            .uri(
+                                    "/search?q={query}&token={token}",
+                                    query,
+                                    finnhubApiProperties.getKey()
+                            )
+                            .retrieve()
+                            .body(SearchStockResponse.class);
+
+        }catch(Exception e){
+            throw new ExternalServiceException(
+                    "Unable to fetch query: " + query
+                            + "error :" + e.getMessage()
+            );
+        }
+
+        if (searchStockResponse == null
+                || searchStockResponse.getResult() == null) {
+
+            throw new ExternalServiceException(
+                    "Unable to search stocks for query: " + query
+            );
+        }
+        return searchStockResponse.getResult();
+    }
 }

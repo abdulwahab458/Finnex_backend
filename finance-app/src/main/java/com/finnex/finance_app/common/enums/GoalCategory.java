@@ -7,5 +7,8 @@ public enum  GoalCategory {
     EDUCATION,
     HOME,
     VEHICLE,
-    CUSTOM
+    TRAVEL,
+    WEDDING,
+    OTHER
+
 }

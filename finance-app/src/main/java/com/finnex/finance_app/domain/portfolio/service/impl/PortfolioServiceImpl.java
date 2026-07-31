@@ -18,6 +18,7 @@ import com.finnex.finance_app.domain.portfolio.repository.PortfolioRepository;
 import com.finnex.finance_app.domain.portfolio.repository.StockHoldingRepository;
 import com.finnex.finance_app.domain.portfolio.repository.StockRepository;
 import com.finnex.finance_app.domain.portfolio.service.PortfolioService;
+import com.finnex.finance_app.domain.portfolio.stock.dto.SearchStockItem;
 import com.finnex.finance_app.domain.portfolio.stock.dto.StockCandelResponse;
 import com.finnex.finance_app.domain.portfolio.stock.service.StockApiService;
 import com.finnex.finance_app.domain.portfolio.util.PerformanceDateRange;
@@ -454,6 +455,11 @@ public class PortfolioServiceImpl implements PortfolioService {
 
         return response;
 
+    }
+
+    @Override
+    public List<SearchStockItem> searchStocks(String query) {
+        return stockApiService.searchStock(query);
     }
 
     @NonNull
