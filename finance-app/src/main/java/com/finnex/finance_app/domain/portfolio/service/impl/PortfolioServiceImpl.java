@@ -41,18 +41,19 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PortfolioServiceImpl implements PortfolioService {
     private final PortfolioRepository portfolioRepository;
-    private final StockHoldingRepository  stockHoldingRepository;
+    private final StockHoldingRepository stockHoldingRepository;
     private final StockRepository stockRepository;
     private final PortfolioMapper portfolioMapper;
-    private  final StockApiService  stockApiService;
+    private final StockApiService stockApiService;
     private final HoldingMapper holdingMapper;
+
     @Override
     @Transactional
     public PortfolioResponse createPortfolio(User currentUser, CreatePortfolioRequest request) {
-        if(portfolioRepository.findByUser(currentUser)
+        if (portfolioRepository.findByUser(currentUser)
                 .stream()
-                .anyMatch(p->p.getName().equalsIgnoreCase(request.getName()))){
-            throw  new DuplicateResourceException(
+                .anyMatch(p -> p.getName().equalsIgnoreCase(request.getName()))) {
+            throw new DuplicateResourceException(
                     "Portfolio already exists");
         }
         Portfolio portfolio = portfolioMapper.toEntity(request);
@@ -93,13 +94,13 @@ public class PortfolioServiceImpl implements PortfolioService {
     @Override
     @Transactional
     public PortfolioResponse updatePortfolio(User currentUser, UUID portfolioId, UpdatePortfolioRequest request) {
-        if(portfolioRepository.findByUser(currentUser)
+        if (portfolioRepository.findByUser(currentUser)
                 .stream()
-                .anyMatch(p->p.getName().equalsIgnoreCase(request.getName()))){
-            throw  new DuplicateResourceException(
+                .anyMatch(p -> p.getName().equalsIgnoreCase(request.getName()))) {
+            throw new DuplicateResourceException(
                     "Portfolio already exists");
         }
-        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId,currentUser).orElseThrow(
+        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId, currentUser).orElseThrow(
                 () -> new ResourceNotFound("Portfolio not found.")
         );
 
@@ -112,11 +113,11 @@ public class PortfolioServiceImpl implements PortfolioService {
     @Override
     @Transactional
     public void deletePortfolio(User currentUser, UUID portfolioId) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId,currentUser).orElseThrow(
+        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId, currentUser).orElseThrow(
                 () -> new ResourceNotFound("Portfolio not found.")
         );
-        if(stockHoldingRepository.existsByPortfolio(portfolio)){
-            throw  new BadRequestException(
+        if (stockHoldingRepository.existsByPortfolio(portfolio)) {
+            throw new BadRequestException(
                     "Portfolio contains holdings. Remove them before deleting the portfolio."
             );
         }
@@ -128,21 +129,21 @@ public class PortfolioServiceImpl implements PortfolioService {
     @Override
     @Transactional
     public HoldingResponse createHolding(User currentUser, UUID portfolioId, CreateHoldingRequest request) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId,currentUser).orElseThrow(
-                ()->
+        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId, currentUser).orElseThrow(
+                () ->
                         new ResourceNotFound("Portfolio not found.")
         );
         Stock stock = stockRepository.findBySymbol(request.getSymbol()).orElse(null);
-        if(stock == null){
+        if (stock == null) {
             stock = stockApiService.fetchAndSaveStock(request.getSymbol());
-        }else {
+        } else {
             stock = stockApiService.refreshStock(stock);
         }
 
-        Optional<StockHolding> existingHolding = stockHoldingRepository.findByPortfolioAndStock(portfolio,stock);
+        Optional<StockHolding> existingHolding = stockHoldingRepository.findByPortfolioAndStock(portfolio, stock);
         StockHolding holding;
-        if(existingHolding.isPresent()){
-             holding = existingHolding.get();
+        if (existingHolding.isPresent()) {
+            holding = existingHolding.get();
             int oldQuantity = holding.getQuantity();
             int newQuantity = request.getQuantity();
             BigDecimal oldCost = holding.getAverageCostBasis();
@@ -178,7 +179,7 @@ public class PortfolioServiceImpl implements PortfolioService {
                             .multiply(BigDecimal.valueOf(totalQuantity));
 
             holding = calculateAndSaveHolding(stock, holding, currentValue, invested);
-        }else {
+        } else {
 
             holding = holdingMapper.toEntity(request);
             holding.setPortfolio(portfolio);
@@ -202,39 +203,77 @@ public class PortfolioServiceImpl implements PortfolioService {
             holding = calculateAndSaveHolding(stock, holding, currentValue, invested);
         }
         updatePortfolioSummary(portfolio);
-        return  holdingMapper.toResponse(holding);
-
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<HoldingResponse> getHoldings(User currentUser, UUID portfolioId) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId,currentUser).orElseThrow(
-                () -> new ResourceNotFound("Portfolio not found.")
-        );
-
-        List<StockHolding> holdings = stockHoldingRepository.findByPortfolio(portfolio);
-        holdings.forEach(holding ->
-                holding.setStock(
-                        stockApiService.refreshStock(
-                                holding.getStock()
-                        )
-                )
-        );
-        return holdings.stream()
-                .map(
-                        holdingMapper::toResponse)
-                .toList();
+        return holdingMapper.toResponse(holding);
 
     }
 
     @Override
     @Transactional
+    public List<HoldingResponse> getHoldings(
+            User currentUser,
+            UUID portfolioId
+    ) {
+
+        Portfolio portfolio = portfolioRepository
+                .findByIdAndUser(portfolioId, currentUser)
+                .orElseThrow(
+                        () -> new ResourceNotFound("Portfolio not found.")
+                );
+
+        List<StockHolding> holdings =
+                stockHoldingRepository.findByPortfolio(portfolio);
+
+        for (StockHolding holding : holdings) {
+
+            Stock refreshedStock =
+                    stockApiService.refreshStock(
+                            holding.getStock()
+                    );
+
+            holding.setStock(refreshedStock);
+
+            BigDecimal currentValue =
+                    refreshedStock.getCurrentPrice()
+                            .multiply(
+                                    BigDecimal.valueOf(
+                                            holding.getQuantity()
+                                    )
+                            );
+
+            BigDecimal invested =
+                    holding.getAverageCostBasis()
+                            .multiply(
+                                    BigDecimal.valueOf(
+                                            holding.getQuantity()
+                                    )
+                            );
+
+            holding.setCurrentValue(currentValue);
+
+            calculateAndSaveHolding(
+                    refreshedStock,
+                    holding,
+                    currentValue,
+                    invested
+            );
+        }
+
+        // Since holding values changed,
+        // portfolio summary must also be updated.
+        updatePortfolioSummary(portfolio);
+
+        return holdings.stream()
+                .map(holdingMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
     public HoldingResponse updateHolding(User currentUser, UUID portfolioId, UUID holdingId, UpdateHoldingRequest request) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId,currentUser).orElseThrow(
+        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId, currentUser).orElseThrow(
                 () -> new ResourceNotFound("Portfolio not found.")
         );
-        StockHolding holding = stockHoldingRepository.findByIdAndPortfolio(holdingId,portfolio)
+        StockHolding holding = stockHoldingRepository.findByIdAndPortfolio(holdingId, portfolio)
                 .orElseThrow(() -> new ResourceNotFound("Holding not found."));
 
         Stock stock = stockApiService.refreshStock(holding.getStock());
@@ -261,12 +300,12 @@ public class PortfolioServiceImpl implements PortfolioService {
 
     @Override
     public void deleteHolding(User currentUser, UUID portfolioId, UUID holdingId) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId,currentUser)
+        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId, currentUser)
                 .orElseThrow(
-                () -> new ResourceNotFound("Portfolio not found.")
-        );
+                        () -> new ResourceNotFound("Portfolio not found.")
+                );
 
-        StockHolding holding = stockHoldingRepository.findByIdAndPortfolio(holdingId,portfolio)
+        StockHolding holding = stockHoldingRepository.findByIdAndPortfolio(holdingId, portfolio)
                 .orElseThrow(() -> new ResourceNotFound("Holding not found."));
 
         stockHoldingRepository.delete(holding);
@@ -275,13 +314,13 @@ public class PortfolioServiceImpl implements PortfolioService {
 
     @Override
     public List<PortfolioAllocationResponse> getPortfolioAllocation(User currentUser, UUID portfolioId) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId,currentUser)
+        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId, currentUser)
                 .orElseThrow(
                         () -> new ResourceNotFound("Portfolio not found.")
                 );
         List<StockHolding> holdings = stockHoldingRepository.findByPortfolio(portfolio);
 
-        if(holdings.isEmpty()){
+        if (holdings.isEmpty()) {
             return List.of();
         }
 
@@ -356,7 +395,7 @@ public class PortfolioServiceImpl implements PortfolioService {
     @Override
     @Transactional(readOnly = true)
     public PortfolioPerformanceResponse getPortfolioPeformance(User currentUser, UUID portfolioId, PortfolioPerformancePeriod period) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId,currentUser).orElseThrow(
+        Portfolio portfolio = portfolioRepository.findByIdAndUser(portfolioId, currentUser).orElseThrow(
                 () -> new ResourceNotFound("Portfolio not found.")
         );
         List<StockHolding> holdings =
@@ -465,21 +504,21 @@ public class PortfolioServiceImpl implements PortfolioService {
     @NonNull
     private StockHolding calculateAndSaveHolding(Stock stock, StockHolding holding, BigDecimal currentValue, BigDecimal invested) {
         BigDecimal totalReturnPercent;
-        if(invested.compareTo(BigDecimal.ZERO)==0){
+        if (invested.compareTo(BigDecimal.ZERO) == 0) {
             totalReturnPercent = BigDecimal.ZERO;
-        }else{
+        } else {
 
-        totalReturnPercent =
-                currentValue
-                        .subtract(invested)
-                        .divide(
-                                invested,
-                                4,
-                                RoundingMode.HALF_UP
-                        )
-                        .multiply(
-                                BigDecimal.valueOf(100)
-                        );
+            totalReturnPercent =
+                    currentValue
+                            .subtract(invested)
+                            .divide(
+                                    invested,
+                                    4,
+                                    RoundingMode.HALF_UP
+                            )
+                            .multiply(
+                                    BigDecimal.valueOf(100)
+                            );
         }
 
         holding.setTotalReturnPercent(totalReturnPercent);

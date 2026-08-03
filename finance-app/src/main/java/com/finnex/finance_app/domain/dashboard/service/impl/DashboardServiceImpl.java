@@ -305,6 +305,7 @@ public class DashboardServiceImpl implements DashboardService {
         response.setSavingsRate(savingsRate);
         return response;
     }
+
     private PortfolioSummaryResponse buildPortfolioSummary(User user) {
         PortfolioSummaryResponse response = new PortfolioSummaryResponse();
         List<PortfolioResponse> portfolios =
@@ -376,11 +377,11 @@ public class DashboardServiceImpl implements DashboardService {
 
         BigDecimal totalBudget =
                 budgets.stream()
-                                .map(BudgetResponse :: getTargetAmount)
-                                        .reduce(
-                                                BigDecimal.ZERO,
-                                                BigDecimal::add
-                                        );
+                        .map(BudgetResponse::getTargetAmount)
+                        .reduce(
+                                BigDecimal.ZERO,
+                                BigDecimal::add
+                        );
 
         BigDecimal totalSpent = budgets.stream()
                 .map(BudgetResponse::getCurrentSpent)
@@ -400,7 +401,7 @@ public class DashboardServiceImpl implements DashboardService {
         return response;
     }
 
-    private GoalSummaryResponse buildGoalSummary(User user){
+    private GoalSummaryResponse buildGoalSummary(User user) {
         GoalSummaryResponse response = new GoalSummaryResponse();
         List<GoalResponse> goals = goalsService.findAllGoals(user);
         int completed = Math.toIntExact(goals.stream()
@@ -422,7 +423,6 @@ public class DashboardServiceImpl implements DashboardService {
                         BigDecimal.ZERO,
                         BigDecimal::add
                 );
-
 
 
         response.setTotalSavedAmount(totalSavedAmount);
@@ -467,15 +467,19 @@ public class DashboardServiceImpl implements DashboardService {
                 dashboardResponse.getBudgetSummary();
         int totalBudgets = budgetSummary.getTotalBudgets();
         int onTrack = budgetSummary.getOnTrack();
-        BigDecimal budgetPercentage =
-                BigDecimal.valueOf(onTrack)
-                        .divide(
-                                BigDecimal.valueOf(totalBudgets),
-                                4,
-                                RoundingMode.HALF_UP
-                        )
-                        .multiply(BigDecimal.valueOf(30));
-        score += budgetPercentage.intValue();
+        if (totalBudgets > 0) {
+
+            BigDecimal budgetPercentage =
+                    BigDecimal.valueOf(onTrack)
+                            .divide(
+                                    BigDecimal.valueOf(totalBudgets),
+                                    4,
+                                    RoundingMode.HALF_UP
+                            )
+                            .multiply(BigDecimal.valueOf(30));
+
+            score += budgetPercentage.intValue();
+        }
 
         GoalSummaryResponse goalSummary =
                 dashboardResponse.getGoalSummary();
