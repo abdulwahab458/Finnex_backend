@@ -5,6 +5,7 @@ import com.finnex.finance_app.common.enums.TransactionStatus;
 import com.finnex.finance_app.common.enums.TransactionType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

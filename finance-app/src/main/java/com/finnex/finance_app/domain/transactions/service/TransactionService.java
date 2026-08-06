@@ -7,12 +7,13 @@ import com.finnex.finance_app.domain.transactions.dto.response.TransactionRespon
 import com.finnex.finance_app.domain.transactions.dto.response.TransactionSummaryResponse;
 import com.finnex.finance_app.domain.user.entity.User;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.UUID;
 
 public interface TransactionService {
-    TransactionResponse createTransaction(User user, CreateTransactionRequest request);
+    TransactionResponse createTransaction(User user, CreateTransactionRequest request, MultipartFile attachment);
     PagedResponse<TransactionResponse> getTransactions(User user, Pageable pageable);
     TransactionResponse getTransactionById(User user,UUID transactionId);
     TransactionResponse updateTransaction(User user, UUID transactionId, UpdateTransactionRequest request);
