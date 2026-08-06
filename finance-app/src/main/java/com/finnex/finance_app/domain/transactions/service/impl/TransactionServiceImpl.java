@@ -18,11 +18,13 @@ import com.finnex.finance_app.domain.transactions.mapper.TransactionMapper;
 import com.finnex.finance_app.domain.transactions.repository.TransactionRepository;
 import com.finnex.finance_app.domain.transactions.service.TransactionService;
 import com.finnex.finance_app.domain.user.entity.User;
+import com.finnex.finance_app.storage.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -39,15 +41,18 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionMapper transactionMapper;
     private final BudgetService budgetService;
     private  final TransactionExcelExporter transactionExcelExporter;
+    private final FileUploadService fileUploadService;
     @Override
     @Transactional
-    public TransactionResponse createTransaction(User user, CreateTransactionRequest request) {
+    public TransactionResponse createTransaction(User user, CreateTransactionRequest request, MultipartFile attachment) {
         Account account = accountRepository
                 .findByUserAndId(
                         user,
                         request.getAccountId()
                 )
                 .orElseThrow(() -> new ResourceNotFound("Account not found"));
+
+
 
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
@@ -59,8 +64,11 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setNotes(request.getNotes());
         transaction.setMerchantName(request.getMerchantName());
         applyTransaction(account,request.getType(),request.getAmount());
-
         account.setAvailableBalance(account.getBalance());
+        if(attachment!=null && !attachment.isEmpty()) {
+            String attachmentUrl = fileUploadService.uploadFile(attachment);
+            transaction.setAttachmentUrl(attachmentUrl);
+        }
         accountRepository.save(account);
         transaction = transactionRepository.save(transaction);
         budgetService.updateBudgetAfterTransactionCreate(transaction);

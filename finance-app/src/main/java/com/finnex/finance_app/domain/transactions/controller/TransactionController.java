@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -52,9 +53,16 @@ public class TransactionController {
     @PostMapping
     public ApiResponse<TransactionResponse> createTransaction(
             @AuthenticationPrincipal User user,
-            @RequestBody CreateTransactionRequest request
+            @RequestPart("transaction")
+            CreateTransactionRequest request,
+
+            @RequestPart(
+                    value = "attachment",
+                    required = false
+            )
+            MultipartFile attachment
             ){
-        return ApiResponse.ok(transactionService.createTransaction(user,request),"Transaction created");
+        return ApiResponse.ok(transactionService.createTransaction(user,request,attachment),"Transaction created");
     }
 
     @GetMapping("/{id}")
