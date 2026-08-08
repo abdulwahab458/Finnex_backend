@@ -29,7 +29,13 @@ public class authController {
     }
 
     @PostMapping("/register")
-    public ApiResponse<UserResponse> register(@Valid @RequestBody RegisterRequestDTO request){
+    public ApiResponse<UserResponse> register(@Valid @RequestBody RegisterRequestDTO request,HttpServletRequest httprequest){
+        rateLimitService.validateRequest(
+                httprequest,
+                "register",
+                3,
+                Duration.ofHours(1)
+        );
         UserResponse userResponse = authService.register(request);
         return  ApiResponse.ok(userResponse,"User Registered Successfully");
     }
@@ -48,8 +54,14 @@ public class authController {
     }
 
     @PostMapping("/refresh")
-    public ApiResponse<AuthResponse> refreshToken( @Valid @RequestBody RefreshTokenRequest request
+    public ApiResponse<AuthResponse> refreshToken( @Valid @RequestBody RefreshTokenRequest request,HttpServletRequest httprequest
     ) {
+        rateLimitService.validateRequest(
+                httprequest,
+                "refresh",
+                20,
+                Duration.ofMinutes(1)
+        );
 
         return ApiResponse.ok(
                 authService.refreshToken(request),
