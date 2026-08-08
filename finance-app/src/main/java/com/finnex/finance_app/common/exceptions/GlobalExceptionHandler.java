@@ -66,6 +66,17 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(RateLimitExceedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRateLimitExceeded(
+            RateLimitExceedException ex
+    ) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponse.error(
+                        ex.getMessage(),
+                        "RATE_LIMIT_EXCEEDED"
+                ));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(
             MethodArgumentNotValidException ex
